@@ -2,3 +2,4 @@ flask
 transformers
 torch  # PyTorch, will be installed with GPU support on Kaggle
 pyngrok  # If you need tunneling for local development (optional)
+Streamlit
