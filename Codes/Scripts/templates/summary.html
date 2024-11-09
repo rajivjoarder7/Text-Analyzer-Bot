@@ -1,1 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Text Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Summary Result</h1>
+        <textarea readonly rows="10">{{ summarized_text }}</textarea>
+        <a href="/" class="btn">HOME</a>
+    </div>
+</body>
+</html>
 
