@@ -32,6 +32,8 @@ def answer_question(question, context):
         summary_ids = model.generate(
             inputs,
             max_length=250,
+            temperature=0.7,  # Adjust temperature for varied responses
+            top_p=0.9, 
             num_beams=12,              # Increase beams for more exploration
             num_beam_groups=6,         # Increase beam groups for diversity
             diversity_penalty=1.5,     # Encourage diversity
