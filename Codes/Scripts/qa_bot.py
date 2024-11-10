@@ -12,7 +12,7 @@ model = T5ForConditionalGeneration.from_pretrained(model_name)
 model.to(device)
 
 # Confidence threshold for generating QA
-CONFIDENCE_THRESHOLD = 0.6
+CONFIDENCE_THRESHOLD = 0.5
 
 def answer_question(question, context):
     """
