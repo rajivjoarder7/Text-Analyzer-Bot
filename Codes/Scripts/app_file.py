@@ -1,16 +1,26 @@
-# app_file.py
-
 import gradio as gr
-from qa_bot import answer_question  # Importing the QA logic
-from text_summarizer import summarize_text  # Assuming you have the summarizer logic in a separate file
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+import torch
+from datetime import datetime
+
+
+# Load pre-trained T5 model fine-tuned on Question Answering
+#device = 0 if torch.cuda.is_available() else -1  # -1 for CPU, 0 for GPU
+#model_name = "t5-large"  # A large T5 model that works well for QA tasks
+#tokenizer = T5Tokenizer.from_pretrained(model_name)
+#model = T5ForConditionalGeneration.from_pretrained(model_name)
+#model.to(device)
+
+# Confidence threshold for generating QA
+#CONFIDENCE_THRESHOLD = 0.5
+
+def answer_question_gradio(question, context):
+    return answer_question(question, context)
 
 # Define Gradio functions for summarization
 def summarize_text_gradio(text):
+    # Assume you already have a text summarization function
     return summarize_text(text)
-
-# Define Gradio functions for question answering
-def answer_question_gradio(question, context):
-    return answer_question(question, context)
 
 # Define the Gradio UI
 with gr.Blocks() as demo:
