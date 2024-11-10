@@ -1,29 +1,40 @@
-from transformers import BartForConditionalGeneration, BartTokenizer
+# qa_bot.py
+
+from transformers import T5ForConditionalGeneration, T5Tokenizer
 import torch
+from datetime import datetime
 
-# Load the BART model and tokenizer for Question Generation
-model_name = "facebook/bart-large"  # We use bart-large, a well-tested and robust model
-model = BartForConditionalGeneration.from_pretrained(model_name)
-tokenizer = BartTokenizer.from_pretrained(model_name)
+# Load pre-trained T5 model fine-tuned on Question Answering
+device = 0 if torch.cuda.is_available() else -1  # -1 for CPU, 0 for GPU
+model_name = "t5-large"  # A large T5 model that works well for QA tasks
+tokenizer = T5Tokenizer.from_pretrained(model_name)
+model = T5ForConditionalGeneration.from_pretrained(model_name)
+model.to(device)
 
-# Function to answer questions
-def answer_question(question, context, confidence_threshold=0.5):
-    # Tokenize the question and context together
-    input_text = f"question: {question} context: {context}"
-    inputs = tokenizer(input_text, return_tensors="pt", truncation=True, padding=True)
+# Confidence threshold for generating QA
+CONFIDENCE_THRESHOLD = 0.5
 
-    # Generate the answer using the model
-    outputs = model.generate(inputs['input_ids'], max_length=100, num_beams=4, early_stopping=True)
-    
-    # Decode the answer
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+def answer_question(question, context):
+    """
+    Answer the question using T5 for abstractive generation.
+    """
+    try:
+        today = datetime.now().strftime("%d-%B-%Y")
+        day_of_week = datetime.now().strftime("%A")
+        context += f"\nToday's date is {today}, today is {day_of_week}."
+        
+        # Tokenize the input
+        inputs = tokenizer.encode(f"question: {question} context: {context}", return_tensors="pt").to(device)
+        
+        # Generate the answer
+        summary_ids = model.generate(inputs, max_length=250, num_beams=5, early_stopping=True)
+        
+        # Decode and return the answer
+        answer = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+        
+        if not answer.strip():
+            return "I'm sorry, but the model couldn't generate a relevant answer. Please try again."
 
-    # Here, instead of generating an extractive answer, we output the model's generative answer directly
-
-    # Compute confidence score (this is a simplistic approach, further optimization could be done)
-    answer_score = torch.nn.functional.cosine_similarity(inputs['input_ids'], outputs[0], dim=-1).mean().item()
-
-    if answer_score < confidence_threshold:
-        return "I'm sorry, but that question seems unrelated to the provided context. Please try again."
-    
-    return answer
+        return answer
+    except Exception as e:
+        return f"Error: {str(e)}"
