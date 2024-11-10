@@ -5,7 +5,7 @@ import torch
 from datetime import datetime
 
 # Load pre-trained T5 model fine-tuned on Question Answering
-device = 0 if torch.cuda.is_available() else -1  # -1 for CPU, 0 for GPU
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #0 for GPU, -1 for CPU generally
 model_name = "t5-large"  # A large T5 model that works well for QA tasks
 tokenizer = T5Tokenizer.from_pretrained(model_name)
 model = T5ForConditionalGeneration.from_pretrained(model_name)
