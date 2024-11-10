@@ -14,8 +14,8 @@ qa_pipeline = pipeline("question-answering", model=model_name, device=device)
 similarity_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Define thresholds
-CONFIDENCE_THRESHOLD = 0.5
-SIMILARITY_THRESHOLD = 0.5
+CONFIDENCE_THRESHOLD = 0.2
+SIMILARITY_THRESHOLD = 0.2
 
 def answer_question(question, context):
     """
