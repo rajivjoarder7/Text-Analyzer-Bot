@@ -1,91 +1,75 @@
 import gradio as gr
 from qa_bot import answer_question
 from text_summarizer import summarize_text
-import time
 
-# Helper function to get word and character count
-def get_counts(text):
-    words = len(text.split())
-    chars = len(text)
-    return words, chars
+# Define Gradio functions for question answering and summarization
+def answer_question_gradio(question, context):
+    return answer_question(question, context)
+
+def summarize_text_gradio(text):
+    return summarize_text(text)
 
 # Define the Gradio UI
-def create_ui():
-    with gr.Blocks(css=".container { color: #333; background-color: #f3f6fb; }") as demo:
-        gr.Markdown("<h1 style='text-align: center; color: #0056b3;'>Text Analysis</h1>")
-        
-        # Text area for paragraph input
-        paragraph = gr.Textbox(placeholder="Type or paste your paragraph here...", lines=5, interactive=True)
-        
-        # Word and character counters
-        word_count = gr.Markdown(value="Words: 0", visible=True)
-        char_count = gr.Markdown(value="Characters: 0", visible=True)
-        
-        # Button for summarization and question answering
-        summarize_button = gr.Button("Summarize", visible=False)
-        ask_question_button = gr.Button("Ask Questions", visible=False)
-        
-        # Question input and answer display
-        question_input = gr.Textbox(placeholder="Enter your question here", visible=False)
-        ask_button = gr.Button("Ask", visible=False)
-        answer_display = gr.Markdown(visible=False)
-        
-        # Home and Reset buttons
-        home_button = gr.Button("Home", visible=False)
-        reset_button = gr.Button("Reset", visible=True)
-        
-        # Word/character count and button logic based on text length
-        def update_ui(text):
-            words, chars = get_counts(text)
-            word_count.update(f"Words: {words}")
-            char_count.update(f"Characters: {chars}")
-            
-            if chars >= 200:
-                ask_question_button.update(visible=True)
-            else:
-                ask_question_button.update(visible=False)
+with gr.Blocks() as demo:
+    # Title of the app
+    gr.Markdown("<h1>Text Analysis</h1>")
+    
+    # Instruction for minimum character input
+    instruction_text = gr.Markdown("Please enter at least 250 characters for analysis to start.")
+    
+    # Textbox for the paragraph/context input
+    context_input = gr.Textbox(label="Enter paragraph here:", placeholder="Type or paste your paragraph here...", lines=10)
+    word_count = gr.Markdown("Word Count: 0")
+    char_count = gr.Markdown("Character Count: 0")
+    
+    # Function to update word and character counts
+    def update_counters(context):
+        words = len(context.split())
+        chars = len(context)
+        return f"Word Count: {words}", f"Character Count: {chars}"
+    
+    context_input.change(fn=update_counters, inputs=context_input, outputs=[word_count, char_count])
+    
+    # Summarize button appears after 2000 characters
+    summarize_button = gr.Button("Summarize", visible=False)
+    summary_output = gr.Textbox(label="Summary", visible=False)
+    
+    def check_show_summarize(context):
+        return gr.update(visible=len(context) >= 2000)
+    
+    # Check if Summarize button should be visible based on character count
+    context_input.change(fn=check_show_summarize, inputs=context_input, outputs=summarize_button)
+    summarize_button.click(fn=summarize_text_gradio, inputs=context_input, outputs=summary_output)
+    
+    # Ask Questions button appears after 250 characters
+    question_button = gr.Button("Ask Questions", visible=False)
+    question_input = gr.Textbox(label="Type your question here:", visible=False)
+    ask_button = gr.Button("Ask", visible=False)
+    answer_output = gr.Textbox(label="Answer", visible=False)
+    
+    def check_show_question_button(context):
+        return gr.update(visible=len(context) >= 250)
+    
+    # Check if Ask Questions button should be visible
+    context_input.change(fn=check_show_question_button, inputs=context_input, outputs=question_button)
+    
+    # Show question input and ask button when Ask Questions button is clicked
+    question_button.click(fn=lambda: gr.update(visible=True), outputs=question_input)
+    question_button.click(fn=lambda: gr.update(visible=True), outputs=ask_button)
+    
+    # Handle the ask question functionality
+    def handle_ask_click(question, context):
+        answer = answer_question_gradio(question, context)
+        return gr.update(visible=True, value=answer)
+    
+    ask_button.click(fn=handle_ask_click, inputs=[question_input, context_input], outputs=answer_output)
 
-            if chars >= 2000:
-                summarize_button.update(visible=True)
-            else:
-                summarize_button.update(visible=False)
-            
-            return gr.update()
-        
-        paragraph.change(update_ui, paragraph)
-        
-        # Summarization functionality
-        def summarize_text_gradio(text):
-            summary = summarize_text(text)
-            summary_display.update(summary)
-            home_button.update(visible=True)
-        
-        summarize_button.click(summarize_text_gradio, inputs=paragraph, outputs=None)
+    # Reset button to clear all fields and reset visibility
+    reset_button = gr.Button("Reset", elem_id="reset-button")
+    def reset_all():
+        return "", "", "Word Count: 0", "Character Count: 0", gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+    
+    reset_button.click(fn=reset_all, outputs=[context_input, question_input, word_count, char_count, summarize_button, question_input, answer_output, summary_output])
 
-        # Question-answering functionality
-        def ask_question_gradio(question, context):
-            answer = answer_question(question, context)
-            answer_display.update(answer)
-            question_input.update(value="")
-        
-        ask_button.click(ask_question_gradio, inputs=[question_input, paragraph], outputs=None)
-
-        # Reset functionality
-        def reset_ui():
-            paragraph.update(value="")
-            word_count.update("Words: 0")
-            char_count.update("Characters: 0")
-            summarize_button.update(visible=False)
-            ask_question_button.update(visible=False)
-            question_input.update(visible=False)
-            ask_button.update(visible=False)
-            answer_display.update(visible=False)
-            home_button.update(visible=False)
-
-        reset_button.click(reset_ui)
-
-    return demo
-
-# Run the Gradio interface
-ui = create_ui()
-ui.launch(share=True)
+# Launch the app with a shareable link
+demo.launch(share=True)
