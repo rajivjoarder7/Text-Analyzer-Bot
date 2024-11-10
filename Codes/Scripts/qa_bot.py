@@ -1,3 +1,5 @@
+# qa_bot.py
+
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 import torch
 from datetime import datetime
@@ -10,14 +12,14 @@ model = T5ForConditionalGeneration.from_pretrained(model_name)
 model.to(device)
 
 # Confidence threshold for generating QA
-CONFIDENCE_THRESHOLD = 0.5
+CONFIDENCE_THRESHOLD = 0.6
 
 def answer_question(question, context):
     """
     Answer the question using T5 for abstractive generation.
     """
     try:
-        today = datetime.now().strftime("%d-%b-%Y")
+        today = datetime.now().strftime("%d-%B-%Y")
         day_of_week = datetime.now().strftime("%A")
         context += f"\nToday's date is {today}, today is {day_of_week}."
         
