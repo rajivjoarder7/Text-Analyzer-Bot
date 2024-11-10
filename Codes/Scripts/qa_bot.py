@@ -4,9 +4,8 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 import torch
 from datetime import datetime
 
-# Load pre-trained T5 model fine-tuned on Question Answering
 device = 0 if torch.cuda.is_available() else -1  # -1 for CPU, 0 for GPU
-model_name = "t5-large"  # A large T5 model that works well for QA tasks
+model_name = "t5-large"  
 tokenizer = T5Tokenizer.from_pretrained(model_name)
 model = T5ForConditionalGeneration.from_pretrained(model_name)
 model.to(device)
