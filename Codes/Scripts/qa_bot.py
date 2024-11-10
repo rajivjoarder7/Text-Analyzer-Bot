@@ -10,7 +10,7 @@ model_name = "google/flan-t5-large"
 qa_pipeline = pipeline("question-answering", model=model_name, device=device)
 
 # Confidence threshold to handle out-of-context questions
-CONFIDENCE_THRESHOLD = 0.5  # Adjusted threshold for improved context accuracy
+CONFIDENCE_THRESHOLD = 0.2  # Adjusted threshold for improved context accuracy
 
 def answer_question(question, context):
     """
