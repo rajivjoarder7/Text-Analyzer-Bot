@@ -30,9 +30,10 @@ def answer_question(question, context):
         summary_ids = model.generate(
             inputs,
             max_length=250,
-            num_beams=8,              # Increased beams for more exploration
-            diversity_penalty=1.0,    # Apply diversity to improve answer richness
-            early_stopping=True       # Stops early when answer is complete
+            num_beams=8,               # Increased beams for more exploration
+            num_beam_groups=4,         # Divides beams into groups for diversity
+            diversity_penalty=1.0,     # Apply diversity to improve answer richness
+            early_stopping=True        # Stops early when answer is complete
         )
         
         # Decode and return the answer
