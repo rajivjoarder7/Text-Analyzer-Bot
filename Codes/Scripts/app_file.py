@@ -1,13 +1,16 @@
+# app_file.py
+
 import gradio as gr
-from qa_bot import answer_question
-from text_summarizer import summarize_text
+from qa_bot import answer_question  # Importing the QA logic
+from text_summarizer import summarize_text  # Assuming you have the summarizer logic in a separate file
 
-# Define Gradio functions for question answering and summarization
-def answer_question_gradio(question, context):
-    return answer_question(question, context)
-
+# Define Gradio functions for summarization
 def summarize_text_gradio(text):
     return summarize_text(text)
+
+# Define Gradio functions for question answering
+def answer_question_gradio(question, context):
+    return answer_question(question, context)
 
 # Define the Gradio UI
 with gr.Blocks() as demo:
@@ -35,11 +38,18 @@ with gr.Blocks() as demo:
     summary_output = gr.Textbox(label="Summary", visible=False)
     
     def check_show_summarize(context):
+        # Show Summarize button when character count is 2000 or more
         return gr.update(visible=len(context) >= 2000)
     
-    # Check if Summarize button should be visible based on character count
+    # Show Summarize button based on character count
     context_input.change(fn=check_show_summarize, inputs=context_input, outputs=summarize_button)
-    summarize_button.click(fn=summarize_text_gradio, inputs=context_input, outputs=summary_output)
+    
+    # Summarize button functionality
+    def handle_summarize(context):
+        summary = summarize_text_gradio(context)
+        return gr.update(visible=True, value=summary)
+    
+    summarize_button.click(fn=handle_summarize, inputs=context_input, outputs=summary_output)
     
     # Ask Questions button appears after 250 characters
     question_button = gr.Button("Ask Questions", visible=False)
@@ -48,9 +58,10 @@ with gr.Blocks() as demo:
     answer_output = gr.Textbox(label="Answer", visible=False)
     
     def check_show_question_button(context):
+        # Show Ask Questions button when character count is 250 or more
         return gr.update(visible=len(context) >= 250)
     
-    # Check if Ask Questions button should be visible
+    # Check if Ask Questions button should be visible based on character count
     context_input.change(fn=check_show_question_button, inputs=context_input, outputs=question_button)
     
     # Show question input and ask button when Ask Questions button is clicked
