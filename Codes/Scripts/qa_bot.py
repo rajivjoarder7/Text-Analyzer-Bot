@@ -26,14 +26,16 @@ def answer_question(question, context):
         # Tokenize the input
         inputs = tokenizer.encode(f"question: {question} context: {context}", return_tensors="pt").to(device)
         
-        # Generate the answer with enhanced beam search and diversity settings
+        # Generate the answer with complex parameters
         summary_ids = model.generate(
             inputs,
             max_length=250,
-            num_beams=8,               # Increased beams for more exploration
-            num_beam_groups=4,         # Divides beams into groups for diversity
-            diversity_penalty=1.0,     # Apply diversity to improve answer richness
-            early_stopping=True        # Stops early when answer is complete
+            num_beams=12,              # Increase beams for more exploration
+            num_beam_groups=6,         # Increase beam groups for diversity
+            diversity_penalty=1.5,     # Encourage diversity
+            repetition_penalty=2.0,    # Penalize repetition to avoid extractive answers
+            length_penalty=1.2,        # Slightly increase length for completeness
+            early_stopping=True        # Stops early when the answer is complete
         )
         
         # Decode and return the answer
