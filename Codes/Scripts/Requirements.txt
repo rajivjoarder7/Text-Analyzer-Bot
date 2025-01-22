@@ -1,6 +1,6 @@
 flask
 transformers
-torch==2.0.1+cu118  # Ensure GPU-enabled PyTorch
+torch
 
 pyngrok  # If you need tunneling for local development (optional)
 Streamlit
