@@ -6,6 +6,7 @@ from datetime import datetime
 
 # Load pre-trained T5 model fine-tuned on Question Answering
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Device in use: {device}")
 model_name = "t5-large"  
 tokenizer = T5Tokenizer.from_pretrained(model_name)
 model = T5ForConditionalGeneration.from_pretrained(model_name)
