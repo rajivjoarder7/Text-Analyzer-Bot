@@ -8,6 +8,8 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 # Move model to the available device (GPU or CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Device in use: {device}")
+
 model = model.to(device)
 
 def summarize_text(text):
