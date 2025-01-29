@@ -1,0 +1,6 @@
+flask
+transformers
+torch
+
+pyngrok  # If you need tunneling for local development (optional)
+Streamlit
