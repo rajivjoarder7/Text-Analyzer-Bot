@@ -1,135 +1,88 @@
-# app.py / qa_bot.py
 import os
-import torch
-from transformers import AutoTokenizer, AutoModelForQuestionAnswering, pipeline
 import gradio as gr
+from huggingface_hub import InferenceClient
 
-# ---------------------------------------------------------
-# 1. Hardware & Model Setup
-# ---------------------------------------------------------
-# SOTA Benchmark Champion for Extractive QA
-MODEL_NAME = "deepset/deberta-v3-large-squad2"
+# Uses Meta's industry-leading Llama-3-8B-Instruct via Hugging Face's free Serverless Inference
+# You can also use "mistralai/Mistral-7B-Instruct-v0.3"
+MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
 
-device = 0 if torch.cuda.is_available() else -1
-print(f"Loading {MODEL_NAME} on {'GPU' if device == 0 else 'CPU'}...")
+# Optional: Add your HF token if you hit rate limits, or leave blank for public free tier
+HF_TOKEN = os.getenv("HF_TOKEN", None)
+client = InferenceClient(model=MODEL_ID, token=HF_TOKEN)
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForQuestionAnswering.from_pretrained(MODEL_NAME)
+SYSTEM_PROMPT = """You are an elite, executive-level Question Answering engine.
+Your objective is to answer the user's question based EXCLUSIVELY on the provided context.
 
-# Create an industrial QA pipeline with sliding window
-qa_engine = pipeline(
-    "question-answering",
-    model=model,
-    tokenizer=tokenizer,
-    device=device
-)
-print("QA Engine initialized and ready.")
+CRITICAL RULES:
+1. Provide the complete, fully-qualified answer including organizations, roles, and entities (e.g., instead of just "head coach", say "Real Madrid head coach").
+2. Answer concisely and directly (1 to 2 sentences maximum).
+3. Do not assume or extrapolate anything outside the context.
+4. If the answer cannot be determined from the context, state: "The provided context does not contain sufficient information to answer this question."
+"""
 
-# Confidence threshold to discard ungrounded queries
-CONFIDENCE_THRESHOLD = 0.20
-
-# ---------------------------------------------------------
-# 2. QA Inference Function
-# ---------------------------------------------------------
 def answer_question(question: str, context: str):
-    """
-    Extracts the precise factual answer from context with zero hallucination.
-    Handles arbitrary length documents via sliding window attention.
-    """
     if not question.strip() or not context.strip():
-        return (
-            "Please provide both a valid question and a context paragraph.",
-            "N/A",
-            "N/A"
-        )
+        return "Please provide both a question and reference context."
+
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": f"Context:\n{context.strip()}\n\nQuestion:\n{question.strip()}\n\nAnswer:"
+        }
+    ]
 
     try:
-        # Pipeline parameters for long texts and unanswerable questions
-        result = qa_engine(
-            question=question.strip(),
-            context=context.strip(),
-            max_seq_len=512,                # Full model context window
-            doc_stride=128,                 # Overlapping window for long documents
-            max_answer_len=120,             # Max length of extracted answer span
-            handle_impossible_answer=True   # SQuAD 2.0 unanswerable question logic
+        response = client.chat_completion(
+            messages=messages,
+            max_tokens=80,
+            temperature=0.1,  # Near-zero temperature ensures strict factual consistency
+            top_p=0.9
         )
-
-        answer = result.get("answer", "").strip()
-        score = result.get("score", 0.0)
-        start = result.get("start", 0)
-        end = result.get("end", 0)
-
-        # Case 1: Model determines question is not answered in the context
-        if not answer or score < CONFIDENCE_THRESHOLD:
-            return (
-                "⚠️ No sufficient answer found in the provided context.",
-                f"{score:.1%} (Low Confidence / Unanswerable)",
-                "The text does not contain conclusive evidence to answer this question."
-            )
-
-        # Case 2: Precise Extracted Answer
-        # Extract 60 characters before and after to provide audit evidence
-        window_start = max(0, start - 60)
-        window_end = min(len(context), end + 60)
-        snippet = context[window_start:start] + f"👉 [{answer}] 👈" + context[end:window_end]
-
-        confidence_str = f"{score:.2%}"
-        if score > 0.70:
-            confidence_str += " (High Certainty)"
-        elif score > 0.40:
-            confidence_str += " (Moderate Certainty)"
-        else:
-            confidence_str += " (Fair Certainty)"
-
-        return answer, confidence_str, f"...{snippet.strip()}..."
-
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"Inference error: {str(e)}", "0.0%", "Error"
+        # Fallback to text_generation if chat_completion endpoint warms up
+        try:
+            prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{SYSTEM_PROMPT}<|eot_id|><|start_header_id|>user<|end_header_id|>\nContext:\n{context}\n\nQuestion:\n{question}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n"
+            res = client.text_generation(prompt, max_new_tokens=80, temperature=0.1)
+            return res.strip()
+        except Exception as inner_e:
+            return f"Service notification: {str(inner_e)}"
 
-# ---------------------------------------------------------
-# 3. Interactive Web UI (Ready for Hugging Face Spaces)
-# ---------------------------------------------------------
-with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue")) as demo:
+with gr.Blocks(theme=gr.themes.Soft(primary_hue="slate")) as demo:
     gr.Markdown("""
-    # 🎯 Enterprise Grade Question Answering System
-    **Model Architecture:** `DeBERTa-v3-Large` fine-tuned on SQuAD 2.0  
-    **Guarantees:** **0% Hallucination** • Strict Context Grounding • Mathematical Confidence Calibration
+    # 🏛️ Enterprise Contextual Intelligence Bot
+    ### Designed for Executive Precision & Zero Hallucination
     """)
 
     with gr.Row():
         with gr.Column(scale=3):
             context_input = gr.Textbox(
-                lines=10,
-                label="Context Paragraph / Source Document",
-                placeholder="Paste the reference document, article, or business case context here..."
+                lines=8,
+                label="Source Document / Business Context",
+                placeholder="Paste paragraph or case study context here..."
             )
             question_input = gr.Textbox(
                 lines=2,
-                label="Question",
-                placeholder="Enter your specific question based strictly on the text above..."
+                label="Executive Question",
+                placeholder="e.g. Who is Jose Mourinho?"
             )
-            submit_btn = gr.Button("Analyze & Extract Answer", variant="primary", size="lg")
+            submit_btn = gr.Button("Generate Qualified Answer", variant="primary", size="lg")
 
         with gr.Column(scale=2):
-            answer_output = gr.Textbox(label="Direct Answer", lines=2, interactive=False)
-            confidence_output = gr.Textbox(label="Confidence Score", interactive=False)
-            evidence_output = gr.Textbox(label="Contextual Evidence (Audit Trail)", lines=4, interactive=False)
+            output_answer = gr.Textbox(label="Precise Answer", lines=4, interactive=False)
 
     submit_btn.click(
         fn=answer_question,
         inputs=[question_input, context_input],
-        outputs=[answer_output, confidence_output, evidence_output]
+        outputs=[output_answer]
     )
 
     gr.Examples(
         examples=[
             [
-                "What was Tesla's total automotive revenue in Q4 2023?",
-                "In the fourth quarter of 2023, Tesla reported total automotive revenues of $21.56 billion, representing an increase of 1% year-over-year. Total company revenue for the quarter reached $25.17 billion, while gross profit stood at $4.44 billion."
-            ],
-            [
-                "Who signed the acquisition agreement on behalf of the company?",
-                "The board of directors approved the merger on October 14. Chief Executive Officer Elena Vance executed the definitive acquisition agreement on behalf of the acquiring entity."
+                "Who is Jose Mourinho?",
+                "Real Madrid head coach José Mourinho publicly criticised defender Raúl Asencio after another off-field controversy involving the 23-year-old Spaniard. The Portuguese coach stressed that he has no complaints about Asencio's attitude at the training ground, but made it clear that a player represents the club at all times."
             ]
         ],
         inputs=[question_input, context_input]
